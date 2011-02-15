@@ -58,7 +58,7 @@ define
 	    proc{$ M}
 	       L={Label M} in
 	       if {HasFeature S L} then
-		  {self {Adjoin M S.L}}
+		  {@this {Adjoin M S.L}}
 	       end
 	    end
 	 end
