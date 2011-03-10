@@ -57,7 +57,7 @@ define
 	       end
 	       @monitored.X:=false
 	    end
-	    {@checkAlarm setAlarmIn(SEND_DELAY unit)}
+	    {@checkAlarm setAlarmIn(CHECK_DELAY unit)}
 	 end
 	 meth Send(_)
 	    for X in {Dictionary.keys @monitoring} do
