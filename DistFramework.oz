@@ -4,14 +4,16 @@ import
    SerializationUtils(toAlpha:ToAlpha
 		      fromAlpha:FromAlpha)
    Internals
+   Property
 export
    Session
    LayerManager
    process:ProcessLayer
    pp2p:PP2PLayer
+   alarm:AlarmLayer
    Version
 define
-   Version=2
+   Version=3
    local
       InternalLayers=i(port:Internals.internalLayerPort
 		       socket:Internals.internalLayerSocket)
@@ -45,8 +47,8 @@ define
 	 attr this
 	 meth !SessionInit(UserInit ?This)
 	    P in
-	    proc{This M} {Send P M} end
-	    this:=This
+	    proc{This M} {@this M} end
+	    this:=proc{$ M} {Send P M} end
 	    P={NewPort thread
 			  {self UserInit}
 			  for M in $ do
@@ -111,33 +113,50 @@ define
 	 end
       end
    end
-
-
-
-   /*
-   fun{PP2PLayer LM ?Uri}
-      SP2P={LM getLayer('dist-layer:sp2p' $)}
-      PP2PId='07f23ac1-9fe1-4f96-a7d3-a8212bb368fc' %Anything unique enough
+   
+   fun{AlarmLayer LM ?Uri}
+      Alarms={NewCell nil}
+      Sessions={NewLKDic}
+      proc{Tick}
+	 ToDo Now OAl NAl
+      in
+	 OAl=Alarms:=NAl
+	 {Wait OAl}
+	 Now={Property.get 'time.total'}
+	 NAl={List.takeDropWhile OAl fun{$ T#_#_}T<Now end ToDo $}
+	 for _#S#P in ToDo do
+	    {{Sessions get(S $)} alarm(P)}
+	 end
+	 if NAl\=nil then
+	    {Delay {Max 0 Now-NAl.1.1}}
+	    {Tick}
+	 end
+      end
    in
-      Uri='dist-layer:pp2p'
+      Uri='dist-layer:alarm'
       class from Session
-	 attr h sp2p messages
+	 attr sid
 	 meth init(SId Handler)
-	    h:=Handler
-	    sp2p:={SP2P init(PP2PId|SId {self facet(sp2pdeliver:SDeliver $)})}
-	    messages:=nil
+	    sid:=SId
+	    {Sessions put(@sid Handler)}
 	 end
-	 meth pp2pSend(Dest Msg)
-	    {@sp2p sp2pSend(Dest m({NewName} Msg))}
+	 meth getTime($)
+	    {Property.get 'time.total'}
 	 end
-	 meth SDeliver(Src SMsg)
-	    m(Id Msg)=SMsg in
-	    if {Not{Member Id @messages}} then
-	       messages:=Id|@messages
-	       {@h pp2pDeliver(Src Msg)}
+	 meth setAlarmAt(Time Payload)
+	    OAl NAl in
+	    OAl=Alarms:=NAl
+	    NAl={List.merge OAl [Time#@sid#Payload] fun{$ X#_#_ Y#_#_}X<Y end}
+	    if OAl==nil orelse OAl.1.1 > Time then
+	       thread
+		  {Delay {Max 0 Time-{self getTime($)}}}
+		  {Tick}
+	       end
 	    end
+	 end
+	 meth setAlarmIn(Interval Payload)
+	    {self setAlarmAt({self getTime($)}+Interval Payload)}
 	 end
       end
    end
-   */
 end
