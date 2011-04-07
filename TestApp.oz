@@ -3,13 +3,12 @@ functor
 import
    DistFramework(layerManager:LM
 		 session:Session
-		 version:DistVersion
-		 pp2p:PP2P_F
-		 process:Process_F)
+		 version:DistVersion)
+   Socket
    Application
    System
 define
-   true=DistVersion==2 %Assert it's the right version of the framework
+   true=DistVersion==4 %Assert it's the right version of the framework
    fun{MyApp_F LM ?Uri}
       PP2P={LM getLayer('dist-layer:pp2p' $)}
    in
@@ -37,10 +36,11 @@ define
 	 end
       end
    end
-   {LM init(socket)}
-   {LM introduceLayer(PP2P_F)}
-   {LM introduceLayer(Process_F)}
+   {LM init()}
+   {LM introduceLayer(Socket.providerIP)}
+   {LM introduceLayer(Socket.clientIP)}
    {LM introduceLayer(MyApp_F)}
+   {Wait {{LM getLayer('address-provider:IPSocket' $)} init($) _}}
 
    Process={{LM getLayer('dist-layer:process' $)} init()}
    TheApp={{LM getLayer('app-layer:ping-pong' $)} init()}

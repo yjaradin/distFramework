@@ -1,22 +1,16 @@
 functor
 import
    LKDictionary(new:NewLKDic)
-   SerializationUtils(toAlpha:ToAlpha
-		      fromAlpha:FromAlpha)
-   Internals
    Property
+   Comm
+   Dist
 export
    Session
    LayerManager
-   process:ProcessLayer
-   pp2p:PP2PLayer
-   alarm:AlarmLayer
    Version
 define
-   Version=3
+   Version=4
    local
-      InternalLayers=i(port:Internals.internalLayerPort
-		       socket:Internals.internalLayerSocket)
       SessionInit={NewName}
       PreInit={NewName}
    in
@@ -28,7 +22,13 @@ define
 	 end
 	 meth init(Kind<=port)
 	    layers:={Dictionary.new}
-	    {self introduceLayer(InternalLayers.Kind)}
+	    {self introduceLayer(AlarmLayer)}
+	    for F in [remoteProcess router localProcess] do
+	       {self introduceLayer(Comm.F)}
+	    end
+	    for F in [comm process bep2p pp2p ifd pfd] do
+	       {self introduceLayer(Dist.F)}
+	    end
 	 end
 	 meth introduceLayer(LayerFunc)
 	    LayerUri
@@ -66,54 +66,6 @@ define
 	 end
       end
    end
-
-   fun{ProcessLayer LM ?Uri}
-      Internals={{LM getLayer('dist-base:internals' $)} init()}
-   in
-      Uri='dist-layer:process'
-      class from Session
-	 meth init()
-	    skip
-	 end
-	 meth here($)
-	    {Internals thisDest($)}
-	 end
-	 meth toText(D $)
-	    {ToAlpha {Internals serializeDest(D $)} ""}
-	 end
-	 meth fromText(A $)
-	    {Internals deserializeDest({FromAlpha A nil}$)}
-	 end
-      end
-   end
-   
-   fun{PP2PLayer LM ?Uri}
-      Internals={{LM getLayer('dist-base:internals' $)} init()}
-      UUID='pp2p:cbdafcff-b57a-43d6-aa00-8fcc60a298d2'
-      Sessions={NewLKDic}
-      proc{DontCare Src M}skip end   
-      thread
-	 for iMsg(Src Msg) in {Internals receive($)} do
-	    case Msg of UUID(Id M) then
-	       {{Sessions condGet(Id DontCare $)} pp2pDeliver(Src M)}
-	    else skip
-	    end
-	 end
-      end
-   in
-      Uri='dist-layer:pp2p'
-      class from Session
-	 attr sid
-	 meth init(SId Handler)
-	    sid:=SId
-	    {Sessions put(@sid Handler)}
-	 end
-	 meth pp2pSend(Dest M)
-	    {Internals send(Dest UUID(@sid M))}
-	 end
-      end
-   end
-   
    fun{AlarmLayer LM ?Uri}
       Alarms={NewCell nil}
       Sessions={NewLKDic}
