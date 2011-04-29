@@ -27,7 +27,7 @@ in
 	 bep2p alarm
 	 toSend
 	 nextId
-	 receiveCutId
+	 receiveCutIds
 	 sendCutId
 	 delivered
       meth init(SId Handler)
@@ -36,7 +36,7 @@ in
 	 alarm:={Alarm init(UUID|alarm|SId {self facet(alarm:OnAlarm $)})}
 	 toSend:={NewDictionary}
 	 delivered:={NewDictionary}
-	 nextId:=0 receiveCutId:=0 sendCutId:=0
+	 nextId:=0 receiveCutIds:={NewDictionary} sendCutId:=0
       end
       meth pp2pSend(To Msg)
 	 Id=@nextId in
@@ -55,15 +55,21 @@ in
       meth Deliver(From Msg)
 	 case Msg
 	 of m(Id Msg CutId) then
-	    if Id>= @receiveCutId andthen {Not {HasFeature @delivered Id}} then
-	       @delivered.Id:=true
+	    RCutId={Dictionary.condGet @receiveCutIds From.id 0}
+	    if{Not{HasFeature @delivered From.id}} then
+	       @delivered.(From.id):={NewDictionary}
+	    end
+	    Delivered=@delivered.(From.id)
+	 in
+	    if Id>=RCutId andthen {Not {HasFeature Delivered Id}} then
+	       Delivered.Id:=true
 	       {@h pp2pDeliver(From Msg)}
 	    end
-	    if CutId>@receiveCutId then
-	       for I in @receiveCutId..CutId-1 do
-		  {Dictionary.remove @delivered I}
+	    if CutId>RCutId then
+	       for I in RCutId..CutId-1 do
+		  {Dictionary.remove Delivered I}
 	       end
-	       receiveCutId:=CutId
+	       @receiveCutIds.(From.id):=CutId
 	    end
 	    {@bep2p bep2pSend(From ack(Id))}
 	 [] ack(Id) then
