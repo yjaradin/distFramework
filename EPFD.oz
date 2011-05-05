@@ -1,4 +1,6 @@
 functor
+import
+   DistFramework(session:Session)
 export
    Epfd
 define
