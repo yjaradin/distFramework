@@ -13,14 +13,17 @@ fun{RemoteProcess LM ?Uri}
 	 myRef
 	 h
 	 connections
+	 connecting
       meth init(Ref Handler)
 	 connections:=nil
+	 connecting:=false
 	 myRef:=Ref
 	 h:=Handler
       end
       meth Merge(Ref)
 	 true=Ref.id==@myRef.id
 	 if Ref.version>@myRef.version then
+	    connecting:=false
 	    myRef:=Ref
 	 end
       end
@@ -45,6 +48,7 @@ fun{RemoteProcess LM ?Uri}
 	    {Filter @connections
 	     fun{$ C} C\=Conn end}
 	 end
+	 connecting:=false
 	 Sync=unit
 	 {self EnsureConn()}
       end
@@ -53,10 +57,12 @@ fun{RemoteProcess LM ?Uri}
 	 {@h msg(From To Msg)}
       end
       meth EnsureConn()
-	 if @connections==nil then
+	 if @connections==nil andthen {Not @connecting} then
+	    connecting:=true
 	    for A in @myRef.addresses do
-	       _={{LM getLayer(A.layer $)} init(A self)}
+	       _={{LM getLayer(A.layer $)} init(A @this)}
 	    end
+	    thread {Delay 3000} connecting:=false end %make sure we will eventualy retry
 	 end
       end
    end
