@@ -193,7 +193,7 @@ in
       meth address(Action Address Sync<=_)=M
 	 {Comm M}
       end
-      meth connection(Action Conn)=M
+      meth connection(Action Conn Sync<=_)=M
 	 {Comm M}
       end
    end
@@ -339,8 +339,8 @@ in
       meth address(Action Addr Sync<=_)
 	 {LocalP address(Action Addr Sync)}
       end
-      meth connection(Action Conn)
-	 {LocalP connection(Action Conn)}
+      meth connection(Action Conn Sync<=_)
+	 {LocalP connection(Action Conn Sync)}
       end
       meth thisProcess($)
 	 {LocalP thisProcess($)}

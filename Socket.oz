@@ -87,8 +87,14 @@ in
 		   port:PortNr)
 	 thread
 	    proc{Loop}
-	       S={@s accept(acceptClass:Open.socket accepted:$)} in
-	       {Process connection(add {New SocketConnection init(S {Process here($)})})}
+	       try
+		  Sync
+		  S={@s accept(acceptClass:Open.socket accepted:$)} in
+		  {Process connection(add {New SocketConnection init(S {Process here($)})} Sync)}
+		  {Wait Sync}
+	       catch _ then %e.g. Too many open connections
+		  {Delay 100}
+	       end
 	       {Loop}
 	    end
 	 in

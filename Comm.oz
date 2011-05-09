@@ -33,7 +33,7 @@ fun{RemoteProcess LM ?Uri}
       meth thisProcess($)
 	 @myRef
       end
-      meth connection(Action Conn)
+      meth connection(Action Conn Sync<=_)
 	 true={Conn getProcess($)}.id==@myRef.id
 	 {self Merge({Conn getProcess($)})}
 	 connections:=
@@ -45,6 +45,7 @@ fun{RemoteProcess LM ?Uri}
 	    {Filter @connections
 	     fun{$ C} C\=Conn end}
 	 end
+	 Sync=unit
 	 {self EnsureConn()}
       end
       meth Deliver(From To Msg)
@@ -70,6 +71,7 @@ in
 	 sites
 	 msgP
       meth init(LocId LocSite Handler)
+	 this:=self % Makes the object passive
 	 proc{Loop Xs}
 	    case Xs
 	    of sync(S)|Xr then
@@ -102,17 +104,24 @@ in
 	 end
       end
       meth EnsureSite(Dest)
-	 if {Not {HasFeature @sites Dest.id}} then
-	    @sites.(Dest.id):={Remote init(Dest @this)}
+	 if {Not {HasFeature @sites Dest.id}} then %This condition is just for the fast-path
+	    Old New in
+	    {Dictionary.condExchange @sites Dest.id unit Old New}
+	    case Old
+	    of unit then 
+	       New={Remote init(Dest @this)}
+	    else
+	       New=Old
+	    end
 	 end
       end
       meth Msg(From To Content)
 	 {self EnsureSite(To)}
 	 {@sites.(To.id) msg(From To Content)}
       end
-      meth connection(Action Conn)
+      meth connection(Action Conn Sync<=_)
 	 {self EnsureSite({Conn getProcess($)})}
-	 {@sites.({Conn getProcess($)}.id) connection(Action Conn)}
+	 {@sites.({Conn getProcess($)}.id) connection(Action Conn Sync)}
       end
    end
 end
