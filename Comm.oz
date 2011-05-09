@@ -59,8 +59,12 @@ fun{RemoteProcess LM ?Uri}
       meth EnsureConn()
 	 if @connections==nil andthen {Not @connecting} then
 	    connecting:=true
-	    for A in @myRef.addresses do
-	       _={{LM getLayer(A.layer $)} init(A @this)}
+	    for
+	       A in @myRef.addresses
+	       while:@connections==nil
+	    do
+	       _={{LM getLayer(A.layer $)} init(A self)}
+	       {Delay 1000}
 	    end
 	    thread {Delay 3000} connecting:=false end %make sure we will eventualy retry
 	 end
