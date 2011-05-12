@@ -38,34 +38,34 @@ define
 	    {@checkAlarm setAlarmIn(CHECK_DELAY unit)}
 	 end
 	 meth monitor(Remote)
-	    @monitored.Remote:=false
-	    @oldMonitored.Remote:=unit
+	    @monitored.(Remote.id):=false#Remote
+	    @oldMonitored.(Remote.id):=unit#Remote
 	    {@pp2p pp2pSend(Remote monitor())}
 	 end
 	 meth Deliver(From Msg)
 	    case Msg
 	    of monitor() then
-	       @monitoring.From:=unit
+	       @monitoring.(From.id):=From
 	    [] imAlive() then
-	       @monitored.From:=true
+	       @monitored.(From.id):=true#From
 	    end
 	 end
 	 meth Check(_)
 	    for X in {Dictionary.keys @monitored} do
-	       if @oldMonitored.X \= @monitored.X then
-		  if @monitored.X then
-		     {@h crash(X)}
+	       if @oldMonitored.X.1 \= @monitored.X.1 then
+		  if @monitored.X.1 then
+		     {@h alive(@monitored.X.2)}
 		  else
-		     {@h alive(X)}
+		     {@h crash(@monitored.X.2)}
 		  end
 		  @oldMonitored.X:=@monitored.X
 	       end
-	       @monitored.X:=false
+	       @monitored.X:=false#(@monitored.X.2)
 	    end
 	    {@checkAlarm setAlarmIn(CHECK_DELAY unit)}
 	 end
 	 meth Send(_)
-	    for X in {Dictionary.keys @monitoring} do
+	    for X in {Dictionary.items @monitoring} do
 	       {@bep2p bep2pSend(X imAlive)}
 	    end
 	    {@sendAlarm setAlarmIn(SEND_DELAY unit)}
