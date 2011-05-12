@@ -6,6 +6,7 @@ export
 define
    fun{Epfd LM ?Uri}
       PP2P={LM getLayer('dist-layer:pp2p' $)}
+      BEP2P={LM getLayer('dist-layer:bep2p' $)}
       Alarm={LM getLayer('dist-layer:alarm' $)}
       UUID='epfd(8525f024-6543-4108-abb8-2621617504a9)'
       SEND_DELAY=1000
@@ -17,6 +18,7 @@ define
 	    sendAlarm
 	    checkAlarm
 	    pp2p
+	    bep2p
 	    h
 	    oldMonitored
 	    monitored
@@ -28,6 +30,7 @@ define
 	    checkAlarm:={Alarm init(UUID|checkAlarm|SId
 				    {self facet(alarm:Check $)})}
 	    pp2p:={PP2P init(UUID|pp2p|SId {self facet(pp2pDeliver:Deliver $)})}
+	    bep2p:={BEP2P init(UUID|bep2p|SId {self facet(bep2pDeliver:Deliver $)})}
 	    oldMonitored:={NewDictionary}
 	    monitored:={NewDictionary}
 	    monitoring:={NewDictionary}
@@ -63,7 +66,7 @@ define
 	 end
 	 meth Send(_)
 	    for X in {Dictionary.keys @monitoring} do
-	       {@pp2p pp2pSend(X imAlive)}
+	       {@bep2p bep2pSend(X imAlive)}
 	    end
 	    {@sendAlarm setAlarmIn(SEND_DELAY unit)}
 	 end
