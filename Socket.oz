@@ -44,8 +44,9 @@ class SocketConnection
       @d=DeliverFacet
    end
    meth send(From To Msg)
+      M={Pack m(From To Msg)} in
       try
-	 {@s write(vs:{ToAlpha {Pack m(From To Msg)} ","})}
+	 {@s write(vs:{ToAlpha M ","})}
       catch _ then
 	 {self close()}
       end
