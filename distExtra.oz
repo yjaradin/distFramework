@@ -162,7 +162,7 @@ define
    Services.pp2p:=SmarterPP2P
 
    class EPFD
-      from DistBase.service
+      from DistBase.baseService
       attr
 	 down
 	 all
@@ -235,7 +235,7 @@ define
    end
    class ELD
       from
-	 DistBase.service
+	 DistBase.baseService
       attr
 	 down
 	 all
@@ -286,7 +286,7 @@ define
    end
    Services.eld:=ELD
 
-   class BCast from DistBase.service end
+   class BCast from DistBase.baseService end
 
    class BEB
       from BCast
