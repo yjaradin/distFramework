@@ -25,7 +25,7 @@ define
 	 Incoming.@pid := {Dictionary.new}
 	 Outgoing.@pid := {New Loopback init(self)}
 	 server := {New TcpServer init(self Port)}
-	 addr := if Addr==unit then
+	 addr := if Host==unit then
 		    a({OS.getHostByName "localhost"}.addrList.1 Port)
 		 else
 		    a(Host Port)
