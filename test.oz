@@ -1,6 +1,6 @@
 declare
-[D DE]={Link ['/home/yjaradin/SINF2345/distBase.ozf'
-	      '/home/yjaradin/SINF2345/distExtra.ozf'
+[D DE]={Link ['distBase.ozf'
+	      'distExtra.ozf'
 	     ]}
 {Browse D}
 {Wait D}
