@@ -428,7 +428,7 @@ define
 	 down
 	 vc
 	 pending
-      meth init(Ps down:Ref<=unit)
+      meth init(Ps<=nil down:Ref<=unit)
 	 if Ref==unit then
 	    @down={@this newService(rb(Ps) {self wrap(deliver:Deliver $)} $)}
 	 else
@@ -488,7 +488,7 @@ define
 	 vc
 	 pending
 	 del
-      meth init(Ps down:Ref<=unit)
+      meth init(Ps<=nil down:Ref<=unit)
 	 if Ref==unit then
 	    @down={@this newService(urb(Ps) {self wrap(deliver:Deliver $)} $)}
 	 else
