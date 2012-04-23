@@ -428,11 +428,13 @@ define
 	 down
 	 vc
 	 pending
-      meth init(Ps<=nil down:Ref<=unit)
-	 if Ref==unit then
+      meth init(Ps<=unit down:Ref<=unit)
+	 if Ref\=unit then
+	    @down={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
+	 elseif Ps\=unit then
 	    @down={@this newService(rb(Ps) {self wrap(deliver:Deliver $)} $)}
 	 else
-	    @down={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
+	    raise rco_hostsListMissing end
 	 end
 	 @vc={Dictionary.new}
 	 @pending={Dictionary.new}
@@ -488,11 +490,13 @@ define
 	 vc
 	 pending
 	 del
-      meth init(Ps<=nil down:Ref<=unit)
-	 if Ref==unit then
+      meth init(Ps<=unit down:Ref<=unit)
+	 if Ref\=unit then
+	    @down={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
+	 elseif Ps\=unit then
 	    @down={@this newService(urb(Ps) {self wrap(deliver:Deliver $)} $)}
 	 else
-	    @down={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
+	    raise uco_hostsListMissing end
 	 end
 	 @vc={Dictionary.new}
 	 @pending={Dictionary.new}
