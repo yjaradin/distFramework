@@ -253,8 +253,8 @@ define
 	 @all={Dictionary.new}
 	 @alive={Dictionary.new}
 	 for P in Ps do
-	    all.(P.pid):=P
-	    alive.(P.pid):=P
+	    @all.(P.pid):=P
+	    @alive.(P.pid):=P
 	 end
 	 if {Not {HasFeature @all @thisP.pid}} then
 	    raise eld_localProcessNotIncluded end
@@ -273,7 +273,7 @@ define
       end
       meth Restore(P)
 	 NewCur OldCur in
-	 alive.(P.pid):=P
+	 @alive.(P.pid):=P
 	 OldCur=current:=NewCur
 	 NewCur={Best {Dictionary.items @alive}}
 	 if NewCur\=OldCur then
