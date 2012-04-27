@@ -35,6 +35,7 @@ define
       meth Deliver(Src Msg)
 	 {@up deliver(Src Msg)}
       end
+      meth haltDown {@flp2p halt} end
       meth getRefParams($)
 	 init(flp2p:{@flp2p getRef($)})
       end
@@ -65,6 +66,7 @@ define
 	    end
 	 end
       end
+      meth haltDown {@sp2p halt} end
       meth getRefParams($)
 	 init(sp2p:{@sp2p getRef($)})
       end
@@ -78,17 +80,17 @@ define
       from DistBase.p2p
       attr
 	 down
-	 partners
+	 partners:{Dictionary.new}
       meth init(down:Ref<=unit)
 	 if Ref==unit then
 	    @down={@this newService(flp2p() {self wrap(deliver:Deliver $)} $)}
 	 else
 	    @down={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
 	 end
-	 @partners={Dictionary.new}
-	 thread {Delay 1000} {self Timeout()} end
+	 thread {self Timeout()} end
       end
       meth Timeout()
+	 {Delay 1000}
 	 for P in {Dictionary.items @partners} do
 	    for M in {Dictionary.items P.sending} do
 	       {@down M}
@@ -97,7 +99,6 @@ define
 	       {@down M}
 	    end
 	 end
-	 {Delay 1000}
 	 {self Timeout()}
       end
       meth Partner(P $)
@@ -155,6 +156,7 @@ define
 	    end
 	 end
       end
+      meth haltDown {@down halt} end
       meth getRefParams($)
 	 init(down:{@down getRef($)})
       end
@@ -165,44 +167,48 @@ define
       from DistBase.baseService
       attr
 	 down
-	 all
-	 alive
-	 suspected
-	 period
-	 newPeriod
+	 all:{Dictionary.new}
+	 alive:{Dictionary.new}
+	 suspected:{Dictionary.new}
+	 period:3000
+	 sendperiod:500
       meth init(down:Ref<=unit)
 	 if Ref==unit then
 	    @down={@this newService(pp2p() {self wrap(deliver:Deliver $)} $)}
 	 else
 	    @down={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
 	 end
-	 @all={Dictionary.new}
-	 @alive={Dictionary.new}
-	 @suspected={Dictionary.new}
-	 @period=@newPeriod=3000
-	 thread {Delay @period} {self Timeout()} end
+	 thread {self Timeout()} end
+	 thread {self Timeout2()} end
       end
       meth Timeout()
+	 Period=@period NewPeriod=Period+500 in
+	 {Delay @period}
 	 for X in {Dictionary.keys @all} do
 	    if {Not {HasFeature @suspected X}} andthen
 	       {Not {HasFeature @alive X}} then
-	       suspected.X:=true
-	       {@up suspect(all.X)}
+	       @suspected.X:=true
+	       {@up suspect(@all.X)}
 	    elseif {HasFeature @suspected X} andthen
 	       {HasFeature @alive X} then
-	       newPeriod:=@period+500
+	       period:=NewPeriod
 	       {Dictionary.remove @suspected X}
-	       {@up restore(all.X)}
+	       {@up restore(@all.X)}
 	    end
-	    {@down send(all.X unit)}
+%	    {@down send(@all.X unit)}
 	 end
 	 {Dictionary.removeAll @alive}
-	 period:=@newPeriod
-	 {Delay @period}
 	 {self Timeout()}
       end
+      meth Timeout2()
+	 {Delay @sendperiod}
+	 for X in {Dictionary.keys @all} do
+	    {@down send(@all.X unit)}
+	 end
+	 {self Timeout2()}
+      end
       meth Deliver(Src _)
-	 alive.(Src.pid):=true
+	 @alive.(Src.pid):=true
       end
       meth monitor(Ps)
 	 for P in Ps do
@@ -211,10 +217,11 @@ define
 	 thread
 	    {Delay @period}
 	    for P in Ps do
-	       all.(P.pid):=P
+	       @all.(P.pid):=P
 	    end
 	 end
       end
+      meth haltDown {@down halt} end
       meth getRefParams($)
 	 init(down:{@down getRef($)})
       end
@@ -238,20 +245,18 @@ define
 	 DistBase.baseService
       attr
 	 down
-	 all
-	 alive
+	 all:{Dictionary.new}
+	 alive:{Dictionary.new}
 	 current
       meth init(Ps down:Ref<=unit)
 	 if Ref==unit then
-	    @down={@this newService(epfd() {self wrap(suspect:Suspect
+	    down:={@this newService(epfd() {self wrap(suspect:Suspect
 						      restore:Restore $)} $)}
 	 else
-	    @down={@this serviceFromRef(Ref {self wrap(suspect:Suspect
+	    down:={@this serviceFromRef(Ref {self wrap(suspect:Suspect
 						       restore:Restore $)} $)}
 	 end
 	 {@down monitor(Ps)}
-	 @all={Dictionary.new}
-	 @alive={Dictionary.new}
 	 for P in Ps do
 	    @all.(P.pid):=P
 	    @alive.(P.pid):=P
@@ -259,7 +264,7 @@ define
 	 if {Not {HasFeature @all @thisP.pid}} then
 	    raise eld_localProcessNotIncluded end
 	 end
-	 @current={Best {Dictionary.items @alive}}
+	 current:={Best {Dictionary.items @alive}}
 	 {@up trust(@current)}
       end
       meth Suspect(P)
@@ -280,6 +285,7 @@ define
 	    {@up trust(NewCur)}
 	 end
       end
+      meth haltDown {@down halt} end
       meth getRefParams($)
 	 init({Dictionary.items @all} down:{@down getRef($)})
       end
@@ -295,11 +301,11 @@ define
 	 all
       meth init(Ps down:Ref<=unit)
 	 if Ref==unit then
-	    @down={@this newService(pp2p() {self wrap(deliver:Deliver $)} $)}
+	    down:={@this newService(pp2p() {self wrap(deliver:Deliver $)} $)}
 	 else
-	    @down={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
+	    down:={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
 	 end
-	 @all=Ps
+	 all:=Ps
       end
       meth broadcast(Msg)
 	 for P in @all do
@@ -309,6 +315,7 @@ define
       meth Deliver(Src Msg)
 	 {@up deliver(Src Msg)}
       end
+      meth haltDown {@down halt} end
       meth getRefParams($)
 	 init(@all down:{@down getRef($)})
       end
@@ -319,17 +326,16 @@ define
       from BCast
       attr
 	 down
-	 delivered
+	 delivered:{Dictionary.new}
       meth init(Ps<=nil down:Ref<=unit)
 	 if Ref==unit then
 	    if {Not {Member @thisP Ps}} then
 	       raise rb_localProcessNotIncluded end
 	    end
-	    @down={@this newService(beb(Ps) {self wrap(deliver:Deliver $)} $)}
+	    down:={@this newService(beb(Ps) {self wrap(deliver:Deliver $)} $)}
 	 else
-	    @down={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
+	    down:={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
 	 end
-	 @delivered={Dictionary.new}
       end
       meth broadcast(Msg)
 	 Mid={NewName} in
@@ -346,6 +352,7 @@ define
 	    end
 	 end
       end
+      meth haltDown {@down halt} end
       meth getRefParams($)
 	 init(down:{@down getRef($)})
       end
@@ -415,6 +422,7 @@ define
 	    end
 	 end
       end
+      meth haltDown {@down halt} end
       meth getRefParams($)
 	 init(down:{@down getRef($)} quorum:@quorum)
       end
@@ -476,6 +484,7 @@ define
 	    end
 	 end
       end
+      meth haltDown {@down halt} end
       meth getRefParams($)
 	 init(down:{@down getRef($)})
       end
@@ -541,6 +550,7 @@ define
 	    end
 	 end
       end
+      meth haltDown {@down halt} end
       meth getRefParams($)
 	 init(down:{@down getRef($)})
       end

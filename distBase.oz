@@ -72,6 +72,11 @@ define
 	 L=@kind in
 	 L(sid:@sid p:{self getRefParams($)})
       end
+      meth halt
+	 {self haltDown}
+	 up:=DropMsg
+      end
+      meth haltDown skip end
       meth getRefParams($) init() end
    end
 
@@ -105,6 +110,9 @@ define
 	    end
 	    {Delay 100} %Delay by average delay to avoid thread explosion
 	 end
+      end
+      meth haltDown
+	 {Dictionary.remove Incoming.(@thisP.pid) @sid}
       end
    end
    Services.flp2p := FLP2P
