@@ -1,7 +1,6 @@
 declare
-[D DE]={Link ['/Users/matthieusieben/Documents/UCL/INGI21MS/Q2/SINF2345/project/distFramework/distBase.ozf'
-	      '/Users/matthieusieben/Documents/UCL/INGI21MS/Q2/SINF2345/project/distFramework/distExtra.ozf'
-	     ]}
+Dir='/Users/matthieusieben/Desktop/distFramework/'
+[D DE]={Link [Dir#'distBase.ozf' Dir#'distExtra.ozf']}
 {Browse D}
 {Wait D}
 {DE.load}
@@ -12,6 +11,6 @@ FL={L newService(pp2p() Show $)}
 {Browse FL}
 
 {FL send({L getProcess($)} hello)}
-{Pickle.save {L getProcess($)}#{FL getRef($)} '/Users/matthieusieben/Documents/UCL/INGI21MS/Q2/SINF2345/project/distFramework/connect.p'}
+{Pickle.save {L getProcess($)}#{FL getRef($)} Dir#'connect.p'}
 
 {FL halt}

@@ -14,7 +14,7 @@ define
    Services={Dictionary.new}
    Incoming={Dictionary.new}
    Outgoing={Dictionary.new}
-   
+
    class LocalProcess
       attr
 	 pid

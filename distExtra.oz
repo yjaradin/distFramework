@@ -170,20 +170,19 @@ define
 	 all:{Dictionary.new}
 	 alive:{Dictionary.new}
 	 suspected:{Dictionary.new}
-	 period:3000
-	 sendperiod:500
+	 delay:3000
       meth init(down:Ref<=unit)
 	 if Ref==unit then
-	    @down={@this newService(pp2p() {self wrap(deliver:Deliver $)} $)}
+	    down:={@this newService(pp2p() {self wrap(deliver:Deliver $)} $)}
 	 else
-	    @down={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
+	    down:={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
 	 end
 	 thread {self Timeout()} end
-	 thread {self Timeout2()} end
       end
       meth Timeout()
-	 Period=@period NewPeriod=Period+500 in
-	 {Delay @period}
+	 NewDelay=@delay+500
+      in
+	 {Delay @delay}
 	 for X in {Dictionary.keys @all} do
 	    if {Not {HasFeature @suspected X}} andthen
 	       {Not {HasFeature @alive X}} then
@@ -191,28 +190,24 @@ define
 	       {@up suspect(@all.X)}
 	    elseif {HasFeature @suspected X} andthen
 	       {HasFeature @alive X} then
-	       period:=NewPeriod
+	       delay:=NewDelay
 	       {Dictionary.remove @suspected X}
 	       {@up restore(@all.X)}
 	    end
-%	    {@down send(@all.X unit)}
+	    {@down send(@all.X heartbeatRequest)}
 	 end
 	 {Dictionary.removeAll @alive}
 	 {self Timeout()}
       end
-      meth Timeout2()
-	 {Delay @sendperiod}
-	 for X in {Dictionary.keys @all} do
-	    {@down send(@all.X unit)}
+      meth Deliver(Src Msg)
+	 case Msg
+	 of heartbeatRequest then {@down send(Src heartbeatReply)}
+	 [] heartbeatReply then @alive.(Src.pid):=true
 	 end
-	 {self Timeout2()}
-      end
-      meth Deliver(Src _)
-	 @alive.(Src.pid):=true
       end
       meth monitor(Ps)
 	 for P in Ps do
-	    {@down send(P unit)}
+	    {@down send(P heartbeatRequest)}
 	 end
 	 thread
 	    {Delay @period}
@@ -245,9 +240,9 @@ define
 	 DistBase.baseService
       attr
 	 down
-	 all:{Dictionary.new}
+	 all
 	 alive:{Dictionary.new}
-	 current
+	 leader
       meth init(Ps down:Ref<=unit)
 	 if Ref==unit then
 	    down:={@this newService(epfd() {self wrap(suspect:Suspect
@@ -256,38 +251,34 @@ define
 	    down:={@this serviceFromRef(Ref {self wrap(suspect:Suspect
 						       restore:Restore $)} $)}
 	 end
-	 {@down monitor(Ps)}
+	 all:=Ps
 	 for P in Ps do
-	    @all.(P.pid):=P
 	    @alive.(P.pid):=P
 	 end
-	 if {Not {HasFeature @all @thisP.pid}} then
+	 if {Not {HasFeature @alive @thisP.pid}} then
 	    raise eld_localProcessNotIncluded end
 	 end
-	 current:={Best {Dictionary.items @alive}}
-	 {@up trust(@current)}
+	 {@down monitor(@all)}
+	 leader:={Best {Dictionary.items @alive}}
+	 {@up trust(@leader)}
       end
       meth Suspect(P)
-	 NewCur OldCur in
 	 {Dictionary.remove @alive P.pid}
-	 OldCur=current:=NewCur
-	 NewCur={Best {Dictionary.items @alive}}
-	 if NewCur\=OldCur then
-	    {@up trust(NewCur)}
+	 if @leader == P then
+	    leader:={Best {Dictionary.items @alive}}
+	    {@up trust(@leader)}
 	 end
       end
       meth Restore(P)
-	 NewCur OldCur in
 	 @alive.(P.pid):=P
-	 OldCur=current:=NewCur
-	 NewCur={Best {Dictionary.items @alive}}
-	 if NewCur\=OldCur then
-	    {@up trust(NewCur)}
+	 if @leader \= {Best [@leader P]} then
+	    leader:=P
+	    {@up trust(P)}
 	 end
       end
       meth haltDown {@down halt} end
       meth getRefParams($)
-	 init({Dictionary.items @all} down:{@down getRef($)})
+	 init(@all down:{@down getRef($)})
       end
    end
    Services.eld:=ELD
@@ -417,7 +408,7 @@ define
 	    else skip
 	    end
 	    if ack.Mid.count>=@quorum andthen
-	       {Not {Dictionary.condExchange delivered Mid false $ true}} then
+	       {Not {Dictionary.condExchange @delivered Mid false $ true}} then
 	       {@up pending.Mid}
 	    end
 	 end
@@ -463,9 +454,7 @@ define
 	    case Msg
 	    of m(VC Content) then
 	       if Src\=@thisP then
-		  Redo={NewCell false}
 		  proc{DeliverPending}
-		     Redo:=false
 		     for K#p(Src VC Content) in {Dictionary.entries @pending} do
 			if {List.all VC fun{$ P#V}
 					   {Dictionary.condGet @vc P 0}>=V
@@ -473,10 +462,9 @@ define
 			   {Dictionary.remove @pending K}
 			   {@up deliver(Src Content)}
 			   {self Bump(Src)}
-			   Redo:=true
+			   {DeliverPending} % Do it again
 			end
 		     end
-		     if @Redo then {DeliverPending} end
 		  end in
 		  @pending.{NewName}:=p(Src VC Content)
 		  {DeliverPending}

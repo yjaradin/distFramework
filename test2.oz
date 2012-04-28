@@ -1,13 +1,12 @@
 declare
-[D DE]={Link ['/Users/matthieusieben/Documents/UCL/INGI21MS/Q2/SINF2345/project/distFramework/distBase.ozf'
-	      '/Users/matthieusieben/Documents/UCL/INGI21MS/Q2/SINF2345/project/distFramework/distExtra.ozf'
-	     ]}
+Dir='/Users/matthieusieben/Desktop/distFramework/'
+[D DE]={Link [Dir#'distBase.ozf' Dir#'distExtra.ozf']}
 {Wait D}
 {DE.load}
 
 L={New D.localProcess init()}
 {Browse {L getProcess($)}}
-DP#FLRef = {Pickle.load '/Users/matthieusieben/Documents/UCL/INGI21MS/Q2/SINF2345/project/distFramework/connect.p'}
+DP#FLRef = {Pickle.load Dir#'connect.p'}
 
 FL={L serviceFromRef(FLRef Browse $)}
 {Browse FL}
