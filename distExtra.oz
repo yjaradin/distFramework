@@ -178,6 +178,7 @@ define
 	    down:={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
 	 end
 	 thread {self Timeout()} end
+	 thread {self Timeout2()} end
       end
       meth Timeout()
 	 NewDelay=@delay+500
@@ -194,10 +195,15 @@ define
 	       {Dictionary.remove @suspected X}
 	       {@up restore(@all.X)}
 	    end
-	    {Dictionary.remove @alive X}
+	 end
+	 {Dictionary.removeAll @alive}
+	 {self Timeout()}
+      end
+      meth Timeout2()
+	 {Delay 500}
+	 for X in {Dictionary.keys @all} do
 	    {@down send(@all.X heartbeatRequest)}
 	 end
-	 {self Timeout()}
       end
       meth Deliver(Src Msg)
 	 case Msg
@@ -276,7 +282,7 @@ define
       end
       meth Restore(P)
 	 @alive.(P.pid):=P
-	 if @leader \= {Best [@leader P]} then
+	 if P \= @leader andthen @leader \= {Best [@leader P]} then
 	    leader:=P
 	    {@up trust(P)}
 	 end
