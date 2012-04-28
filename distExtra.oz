@@ -194,9 +194,9 @@ define
 	       {Dictionary.remove @suspected X}
 	       {@up restore(@all.X)}
 	    end
+	    {Dictionary.remove @alive X}
 	    {@down send(@all.X heartbeatRequest)}
 	 end
-	 {Dictionary.removeAll @alive}
 	 {self Timeout()}
       end
       meth Deliver(Src Msg)
@@ -210,7 +210,7 @@ define
 	    {@down send(P heartbeatRequest)}
 	 end
 	 thread
-	    {Delay @period}
+	    {Delay @delay}
 	    for P in Ps do
 	       @all.(P.pid):=P
 	    end
@@ -265,8 +265,13 @@ define
       meth Suspect(P)
 	 {Dictionary.remove @alive P.pid}
 	 if @leader == P then
-	    leader:={Best {Dictionary.items @alive}}
-	    {@up trust(@leader)}
+	    Alive = {Dictionary.items @alive} in
+	    if Alive \= nil then
+	       leader:={Best Alive}
+	       if @leader \= nil then
+		  {@up trust(@leader)}
+	       end
+	    end
 	 end
       end
       meth Restore(P)
