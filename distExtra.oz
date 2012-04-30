@@ -287,7 +287,7 @@ define
       end
       meth Restore(P)
 	 @alive.(P.pid):=P
-	 if P \= @leader andthen @leader \= {Best [@leader P]} then
+	 if @leader \= {Best [@leader P]} then
 	    leader:=P
 	    {@up trust(P)}
 	 end
