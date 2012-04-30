@@ -178,47 +178,45 @@ define
 	    down:={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
 	 end
 	 thread {self Timeout()} end
-	 thread {self Timeout2()} end
+	 thread {self HeartbeatTimeout()} end
       end
       meth Timeout()
 	 NewDelay=@delay+500
       in
 	 {Delay @delay}
-	 for X in {Dictionary.keys @all} do
+	 for X#P in {Dictionary.entries @all} do
 	    if {Not {HasFeature @suspected X}} andthen
 	       {Not {HasFeature @alive X}} then
 	       @suspected.X:=true
-	       {@up suspect(@all.X)}
+	       {@up suspect(P)}
 	    elseif {HasFeature @suspected X} andthen
 	       {HasFeature @alive X} then
 	       delay:=NewDelay
 	       {Dictionary.remove @suspected X}
-	       {@up restore(@all.X)}
+	       {@up restore(P)}
 	    end
 	 end
 	 {Dictionary.removeAll @alive}
 	 {self Timeout()}
       end
-      meth Timeout2()
+      meth HeartbeatTimeout()
 	 {Delay 500}
-	 for X in {Dictionary.keys @all} do
-	    {@down send(@all.X heartbeatRequest)}
+	 for P in {Dictionary.items @all} do
+	    {@down send(P unit)}
 	 end
+	 {self HeartbeatTimeout()}
       end
       meth Deliver(Src Msg)
-	 case Msg
-	 of heartbeatRequest then {@down send(Src heartbeatReply)}
-	 [] heartbeatReply then @alive.(Src.pid):=true
-	 end
+	 @alive.(Src.pid):=true
       end
       meth monitor(Ps)
 	 for P in Ps do
-	    {@down send(P heartbeatRequest)}
+	    {@down send(P unit)}
 	 end
 	 thread
 	    {Delay @delay}
-	    for P in Ps do
-	       @all.(P.pid):=P
+	    for P in Ps do X=P.pid in
+	       @all.X:=P
 	    end
 	 end
       end
@@ -233,8 +231,17 @@ define
       case Ps
       of [A] then A
       [] A|B|T then
-	 PA=A.pid PB=B.pid in
-	 if {Arity f(PA:a PB:b)}==[PA PB] then
+	 fun{Smaller LA LB}
+	    case LA#LB of (HA|TA)#(HB|TB) then
+	       if HA==HB then {Smaller TA TB}
+	       else HA<HB
+	       end
+	    [] nil#(_|_) then true
+	    else false end
+	 end
+	 HA=A.addr.2|A.addr.1
+	 HB=B.addr.2|B.addr.1 in
+	 if {Smaller HA HB} then
 	    {Best A|T}
 	 else
 	    {Best B|T}
@@ -264,9 +271,9 @@ define
 	 if {Not {HasFeature @alive @thisP.pid}} then
 	    raise eld_localProcessNotIncluded end
 	 end
-	 {@down monitor(@all)}
-	 leader:={Best {Dictionary.items @alive}}
+	 leader:={Best Ps}
 	 {@up trust(@leader)}
+	 {@down monitor(Ps)}
       end
       meth Suspect(P)
 	 {Dictionary.remove @alive P.pid}
@@ -274,9 +281,7 @@ define
 	    Alive = {Dictionary.items @alive} in
 	    if Alive \= nil then
 	       leader:={Best Alive}
-	       if @leader \= nil then
-		  {@up trust(@leader)}
-	       end
+	       {@up trust(@leader)}
 	    end
 	 end
       end
