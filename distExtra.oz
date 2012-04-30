@@ -3,6 +3,7 @@ import
    DistBase at 'distBase.ozf'
 export
    Load
+   Best
 define
    Services=DistBase.services
    
@@ -18,13 +19,13 @@ define
 	    @flp2p={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
 	 end
 	 @sent=nil
-	 thread {Delay 1000} {self Timeout()} end
+	 thread {self Timeout()} end
       end 
       meth Timeout()
+	 {Delay 1000}
 	 for Dest#M in @sent do
 	    {@flp2p send(Dest M)}
 	 end
-	 {Delay 1000}
 	 {self Timeout()}
       end
       meth send(Dest Msg)
@@ -272,7 +273,7 @@ define
 	    raise eld_localProcessNotIncluded end
 	 end
 	 leader:={Best Ps}
-	 {@up trust(@leader)}
+	 thread {@up trust(@leader)} end
 	 {@down monitor(Ps)}
       end
       meth Suspect(P)
