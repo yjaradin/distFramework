@@ -81,8 +81,9 @@ define
       from DistBase.p2p
       attr
 	 down
-	 partners:{Dictionary.new}
+	 partners
       meth init(down:Ref<=unit)
+	 partners:={Dictionary.new}
 	 if Ref==unit then
 	    @down={@this newService(flp2p() {self wrap(deliver:Deliver $)} $)}
 	 else
@@ -168,11 +169,15 @@ define
       from DistBase.baseService
       attr
 	 down
-	 all:{Dictionary.new}
-	 alive:{Dictionary.new}
-	 suspected:{Dictionary.new}
-	 delay:3000
+	 all
+	 alive
+	 suspected
+	 delay
       meth init(down:Ref<=unit)
+	 all:={Dictionary.new}
+	 alive:={Dictionary.new}
+	 suspected:={Dictionary.new}
+	 delay:=3000
 	 if Ref==unit then
 	    down:={@this newService(pp2p() {self wrap(deliver:Deliver $)} $)}
 	 else
@@ -255,7 +260,7 @@ define
       attr
 	 down
 	 all
-	 alive:{Dictionary.new}
+	 alive
 	 leader
       meth init(Ps down:Ref<=unit)
 	 if Ref==unit then
@@ -265,6 +270,7 @@ define
 	    down:={@this serviceFromRef(Ref {self wrap(suspect:Suspect
 						       restore:Restore $)} $)}
 	 end
+	 alive:={Dictionary.new}
 	 all:=Ps
 	 for P in Ps do
 	    @alive.(P.pid):=P
@@ -334,8 +340,9 @@ define
       from BCast
       attr
 	 down
-	 delivered:{Dictionary.new}
+	 delivered
       meth init(Ps<=nil down:Ref<=unit)
+	 delivered:={Dictionary.new}
 	 if Ref==unit then
 	    if {Not {Member @thisP Ps}} then
 	       raise rb_localProcessNotIncluded end
