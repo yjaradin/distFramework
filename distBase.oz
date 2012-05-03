@@ -102,14 +102,14 @@ define
 	 Incoming.(@thisP.pid).@sid := @up
       end
       meth send(To Msg)
-	 if {OS.rand} mod 1000 <100 then {self send(To Msg)} end %Dup rate
-	 if {OS.rand} mod 1000 <900 then %No-drop rate
-	    thread
-	       {Delay {OS.rand} mod 200} %Better distribution needed
+%	 if {OS.rand} mod 1000 <100 then {self send(To Msg)} end %Dup rate
+%	 if {OS.rand} mod 1000 <900 then %No-drop rate
+%	    thread
+%	       {Delay {OS.rand} mod 200} %Better distribution needed
 	       {{GetConnection To} send({Pickle.pack flp2p(@sid @thisP Msg)})}
-	    end
-	    {Delay 100} %Delay by average delay to avoid thread explosion
-	 end
+%	    end
+%	    {Delay 100} %Delay by average delay to avoid thread explosion
+%	 end
       end
       meth haltDown
 	 {Dictionary.remove Incoming.(@thisP.pid) @sid}

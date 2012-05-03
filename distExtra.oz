@@ -431,7 +431,7 @@ define
 	       {@down broadcast(Msg)}
 	    else skip
 	    end
-	    if ack.Mid.count>=@quorum andthen
+	    if @ack.Mid.count>=@quorum andthen
 	       {Not {Dictionary.condExchange @delivered Mid false $ true}} then
 	       {@up pending.Mid}
 	    end
