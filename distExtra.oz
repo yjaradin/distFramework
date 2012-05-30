@@ -3,6 +3,7 @@ import
    DistBase at 'distBase.ozf'
 export
    Load
+   Best
 define
    Services=DistBase.services
    
@@ -18,13 +19,13 @@ define
 	    @flp2p={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
 	 end
 	 @sent=nil
-	 thread {Delay 1000} {self Timeout()} end
+	 thread {self Timeout()} end
       end 
       meth Timeout()
+	 {Delay 1000}
 	 for Dest#M in @sent do
 	    {@flp2p send(Dest M)}
 	 end
-	 {Delay 1000}
 	 {self Timeout()}
       end
       meth send(Dest Msg)
@@ -35,6 +36,7 @@ define
       meth Deliver(Src Msg)
 	 {@up deliver(Src Msg)}
       end
+      meth haltDown {@flp2p halt} end
       meth getRefParams($)
 	 init(flp2p:{@flp2p getRef($)})
       end
@@ -65,6 +67,7 @@ define
 	    end
 	 end
       end
+      meth haltDown {@sp2p halt} end
       meth getRefParams($)
 	 init(sp2p:{@sp2p getRef($)})
       end
@@ -80,15 +83,16 @@ define
 	 down
 	 partners
       meth init(down:Ref<=unit)
+	 partners:={Dictionary.new}
 	 if Ref==unit then
 	    @down={@this newService(flp2p() {self wrap(deliver:Deliver $)} $)}
 	 else
 	    @down={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
 	 end
-	 @partners={Dictionary.new}
-	 thread {Delay 1000} {self Timeout()} end
+	 thread {self Timeout()} end
       end
       meth Timeout()
+	 {Delay 1000}
 	 for P in {Dictionary.items @partners} do
 	    for M in {Dictionary.items P.sending} do
 	       {@down M}
@@ -97,7 +101,6 @@ define
 	       {@down M}
 	    end
 	 end
-	 {Delay 1000}
 	 {self Timeout()}
       end
       meth Partner(P $)
@@ -155,6 +158,7 @@ define
 	    end
 	 end
       end
+      meth haltDown {@down halt} end
       meth getRefParams($)
 	 init(down:{@down getRef($)})
       end
@@ -168,53 +172,61 @@ define
 	 all
 	 alive
 	 suspected
-	 period
-	 newPeriod
+	 delay
       meth init(down:Ref<=unit)
+	 all:={Dictionary.new}
+	 alive:={Dictionary.new}
+	 suspected:={Dictionary.new}
+	 delay:=3000
 	 if Ref==unit then
-	    @down={@this newService(pp2p() {self wrap(deliver:Deliver $)} $)}
+	    down:={@this newService(pp2p() {self wrap(deliver:Deliver $)} $)}
 	 else
-	    @down={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
+	    down:={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
 	 end
-	 @all={Dictionary.new}
-	 @alive={Dictionary.new}
-	 @suspected={Dictionary.new}
-	 @period=@newPeriod=3000
-	 thread {Delay @period} {self Timeout()} end
+	 thread {self Timeout()} end
+	 thread {self HeartbeatTimeout()} end
       end
       meth Timeout()
-	 for X in {Dictionary.keys @all} do
+	 NewDelay=@delay+500
+      in
+	 {Delay @delay}
+	 for X#P in {Dictionary.entries @all} do
 	    if {Not {HasFeature @suspected X}} andthen
 	       {Not {HasFeature @alive X}} then
-	       suspected.X:=true
-	       {@up suspect(all.X)}
+	       @suspected.X:=true
+	       {@up suspect(P)}
 	    elseif {HasFeature @suspected X} andthen
 	       {HasFeature @alive X} then
-	       newPeriod:=@period+500
+	       delay:=NewDelay
 	       {Dictionary.remove @suspected X}
-	       {@up restore(all.X)}
+	       {@up restore(P)}
 	    end
-	    {@down send(all.X unit)}
 	 end
 	 {Dictionary.removeAll @alive}
-	 period:=@newPeriod
-	 {Delay @period}
 	 {self Timeout()}
       end
-      meth Deliver(Src _)
-	 alive.(Src.pid):=true
+      meth HeartbeatTimeout()
+	 {Delay 500}
+	 for P in {Dictionary.items @all} do
+	    {@down send(P unit)}
+	 end
+	 {self HeartbeatTimeout()}
+      end
+      meth Deliver(Src Msg)
+	 @alive.(Src.pid):=true
       end
       meth monitor(Ps)
 	 for P in Ps do
 	    {@down send(P unit)}
 	 end
 	 thread
-	    {Delay @period}
-	    for P in Ps do
-	       all.(P.pid):=P
+	    {Delay @delay}
+	    for P in Ps do X=P.pid in
+	       @all.X:=P
 	    end
 	 end
       end
+      meth haltDown {@down halt} end
       meth getRefParams($)
 	 init(down:{@down getRef($)})
       end
@@ -225,8 +237,17 @@ define
       case Ps
       of [A] then A
       [] A|B|T then
-	 PA=A.pid PB=B.pid in
-	 if {Arity f(PA:a PB:b)}==[PA PB] then
+	 fun{Smaller LA LB}
+	    case LA#LB of (HA|TA)#(HB|TB) then
+	       if HA==HB then {Smaller TA TB}
+	       else HA<HB
+	       end
+	    [] nil#(_|_) then true
+	    else false end
+	 end
+	 HA=A.addr.2|A.addr.1
+	 HB=B.addr.2|B.addr.1 in
+	 if {Smaller HA HB} then
 	    {Best A|T}
 	 else
 	    {Best B|T}
@@ -240,48 +261,47 @@ define
 	 down
 	 all
 	 alive
-	 current
+	 leader
       meth init(Ps down:Ref<=unit)
 	 if Ref==unit then
-	    @down={@this newService(epfd() {self wrap(suspect:Suspect
+	    down:={@this newService(epfd() {self wrap(suspect:Suspect
 						      restore:Restore $)} $)}
 	 else
-	    @down={@this serviceFromRef(Ref {self wrap(suspect:Suspect
+	    down:={@this serviceFromRef(Ref {self wrap(suspect:Suspect
 						       restore:Restore $)} $)}
 	 end
-	 {@down monitor(Ps)}
-	 @all={Dictionary.new}
-	 @alive={Dictionary.new}
+	 alive:={Dictionary.new}
+	 all:=Ps
 	 for P in Ps do
-	    all.(P.pid):=P
-	    alive.(P.pid):=P
+	    @alive.(P.pid):=P
 	 end
-	 if {Not {HasFeature @all @thisP.pid}} then
+	 if {Not {HasFeature @alive @thisP.pid}} then
 	    raise eld_localProcessNotIncluded end
 	 end
-	 @current={Best {Dictionary.items @alive}}
-	 {@up trust(@current)}
+	 leader:={Best Ps}
+	 thread {@up trust(@leader)} end
+	 {@down monitor(Ps)}
       end
       meth Suspect(P)
-	 NewCur OldCur in
 	 {Dictionary.remove @alive P.pid}
-	 OldCur=current:=NewCur
-	 NewCur={Best {Dictionary.items @alive}}
-	 if NewCur\=OldCur then
-	    {@up trust(NewCur)}
+	 if @leader == P then
+	    Alive = {Dictionary.items @alive} in
+	    if Alive \= nil then
+	       leader:={Best Alive}
+	       {@up trust(@leader)}
+	    end
 	 end
       end
       meth Restore(P)
-	 NewCur OldCur in
-	 alive.(P.pid):=P
-	 OldCur=current:=NewCur
-	 NewCur={Best {Dictionary.items @alive}}
-	 if NewCur\=OldCur then
-	    {@up trust(NewCur)}
+	 @alive.(P.pid):=P
+	 if @leader \= {Best [@leader P]} then
+	    leader:=P
+	    {@up trust(P)}
 	 end
       end
+      meth haltDown {@down halt} end
       meth getRefParams($)
-	 init({Dictionary.items @all} down:{@down getRef($)})
+	 init(@all down:{@down getRef($)})
       end
    end
    Services.eld:=ELD
@@ -295,11 +315,11 @@ define
 	 all
       meth init(Ps down:Ref<=unit)
 	 if Ref==unit then
-	    @down={@this newService(pp2p() {self wrap(deliver:Deliver $)} $)}
+	    down:={@this newService(pp2p() {self wrap(deliver:Deliver $)} $)}
 	 else
-	    @down={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
+	    down:={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
 	 end
-	 @all=Ps
+	 all:=Ps
       end
       meth broadcast(Msg)
 	 for P in @all do
@@ -309,6 +329,7 @@ define
       meth Deliver(Src Msg)
 	 {@up deliver(Src Msg)}
       end
+      meth haltDown {@down halt} end
       meth getRefParams($)
 	 init(@all down:{@down getRef($)})
       end
@@ -321,15 +342,15 @@ define
 	 down
 	 delivered
       meth init(Ps<=nil down:Ref<=unit)
+	 delivered:={Dictionary.new}
 	 if Ref==unit then
 	    if {Not {Member @thisP Ps}} then
 	       raise rb_localProcessNotIncluded end
 	    end
-	    @down={@this newService(beb(Ps) {self wrap(deliver:Deliver $)} $)}
+	    down:={@this newService(beb(Ps) {self wrap(deliver:Deliver $)} $)}
 	 else
-	    @down={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
+	    down:={@this serviceFromRef(Ref {self wrap(deliver:Deliver $)} $)}
 	 end
-	 @delivered={Dictionary.new}
       end
       meth broadcast(Msg)
 	 Mid={NewName} in
@@ -346,6 +367,7 @@ define
 	    end
 	 end
       end
+      meth haltDown {@down halt} end
       meth getRefParams($)
 	 init(down:{@down getRef($)})
       end
@@ -409,12 +431,13 @@ define
 	       {@down broadcast(Msg)}
 	    else skip
 	    end
-	    if ack.Mid.count>=@quorum andthen
-	       {Not {Dictionary.condExchange delivered Mid false $ true}} then
-	       {@up pending.Mid}
+	    if @ack.Mid.count>=@quorum andthen
+	       {Not {Dictionary.condExchange @delivered Mid false $ true}} then
+	       {@up @pending.Mid}
 	    end
 	 end
       end
+      meth haltDown {@down halt} end
       meth getRefParams($)
 	 init(down:{@down getRef($)} quorum:@quorum)
       end
@@ -455,9 +478,7 @@ define
 	    case Msg
 	    of m(VC Content) then
 	       if Src\=@thisP then
-		  Redo={NewCell false}
 		  proc{DeliverPending}
-		     Redo:=false
 		     for K#p(Src VC Content) in {Dictionary.entries @pending} do
 			if {List.all VC fun{$ P#V}
 					   {Dictionary.condGet @vc P 0}>=V
@@ -465,10 +486,9 @@ define
 			   {Dictionary.remove @pending K}
 			   {@up deliver(Src Content)}
 			   {self Bump(Src)}
-			   Redo:=true
+			   {DeliverPending} % Do it again
 			end
 		     end
-		     if @Redo then {DeliverPending} end
 		  end in
 		  @pending.{NewName}:=p(Src VC Content)
 		  {DeliverPending}
@@ -476,6 +496,7 @@ define
 	    end
 	 end
       end
+      meth haltDown {@down halt} end
       meth getRefParams($)
 	 init(down:{@down getRef($)})
       end
@@ -541,6 +562,7 @@ define
 	    end
 	 end
       end
+      meth haltDown {@down halt} end
       meth getRefParams($)
 	 init(down:{@down getRef($)})
       end
